@@ -25,21 +25,6 @@ class FrontendController extends Controller
     }
 
     public function home(){
-        LaraCart::add(
-    $itemID,
-    $name = null,
-    $qty = 1,
-    $price = '0.00',
-    $options = [],
-    $taxable = true,
-    $lineItem = false
-        );
-
-// Adding an item to the cart
-// LaraCart::add(2, 'Shirt', 200, 15.99, [
-//     'size' => 'XL'
-// ]);
-die;
         $featured=Product::where('status','active')->where('is_featured',1)->orderBy('price','DESC')->limit(2)->get();
         $posts=Post::where('status','active')->orderBy('id','DESC')->limit(3)->get();
         $banners=Banner::where('status','active')->limit(3)->orderBy('id','DESC')->get();

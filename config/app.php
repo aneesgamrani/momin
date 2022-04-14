@@ -181,7 +181,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
 
-        LukePOLO\LaraCart\LaraCartServiceProvider::class,
+        
     ],
 
     /*
@@ -238,7 +238,7 @@ return [
         'PDF' => Barryvdh\DomPDF\Facade::class,
         'PayPal' => Srmklive\PayPal\Facades\PayPal::class,
         'Socialite' => Laravel\Socialite\Facades\Socialite::class,
-        'LaraCart' => LukePOLO\LaraCart\Facades\LaraCart::class,
+
     ],
 
 ];
