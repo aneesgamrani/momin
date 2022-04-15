@@ -82,6 +82,48 @@
 											<button class="btn float-right" type="submit">Update</button>
 										</td>
 									</track>
+                                @elseif (session()->get('cart') && !empty(session()->get('cart')))
+                                @php $cartData = session()->get('cart');
+                                    $total = 0;
+
+                                @endphp
+                               		@foreach($cartData as $k => $val)
+                                       @foreach ($val as $key => $value )
+                                       @php
+                                        $total = $value['amount'] * $value['quantity'];
+                                       @endphp
+                                            <tr>
+
+											<td class="image" data-title="No"><img src="{{$value['product_info']->photo}}" alt="{{$value['product_info']->photo}}"></td>
+											<td class="product-des" data-title="Description">
+												<p class="product-name"><a href="{{route('product-detail',$value['product_info']->slug) }}" target="_blank">{!!$value['product_info']->title !!}</a></p>
+												<p class="product-des">{!!$value['product_info']->summary !!}</p>
+											</td>
+											<td class="price" data-title="Price"><span>Rs {{number_format($value['price'],2)}}</span></td>
+											<td class="qty" data-title="Qty"><!-- Input Order -->
+												<div class="input-group">
+													<div class="button minus">
+														<button type="button" class="btn btn-primary btn-number" disabled="disabled" data-type="minus" data-field="quant[{{$value['quantity']}}]">
+															<i class="ti-minus"></i>
+														</button>
+													</div>
+													<input type="text" name="quant[{{$value['quantity']}}]" class="input-number"  data-min="1" data-max="100" value="{{$value['quantity']}}">
+													<input type="hidden" name="qty_id[]" value="{{$key}}">
+													<div class="button plus">
+														<button type="button" class="btn btn-primary btn-number" data-type="plus" data-field="quant[{{$value['quantity']}}]">
+															<i class="ti-plus"></i>
+														</button>
+													</div>
+												</div>
+												<!--/ End Input Order -->
+											</td>
+											<td class="total-amount cart_single_price" data-title="Total"><span class="money">${{$value['amount'] * $value['quantity']}}</span></td>
+
+											<td class="action" data-title="Remove"><a href="{{route('cart-delete',$key)}}"><i class="ti-trash remove-icon"></i></a></td>
+										</tr>
+                                       @endforeach
+
+									@endforeach
 								@else
 										<tr>
 											<td class="text-center">
@@ -119,7 +161,8 @@
 									</div> --}}
 								</div>
 							</div>
-							<div class="col-lg-4 col-md-7 col-12">
+                            @auth
+                            <div class="col-lg-4 col-md-7 col-12">
 								<div class="right">
 									<ul>
 										<li class="order_subtotal" data-price="{{Helper::totalCartPrice()}}">Cart Subtotal<span>Rs {{number_format(Helper::totalCartPrice(),2)}}</span></li>
@@ -145,6 +188,35 @@
 									</div>
 								</div>
 							</div>
+                            @endauth
+                            @if (!auth()->user())
+                                <div class="col-lg-4 col-md-7 col-12">
+                                    <div class="right">
+                                        <ul>
+                                            <li class="order_subtotal" data-price="{{Helper::totalCartPrice()}}">Cart Subtotal<span>Rs {{number_format($total,2)}}</span></li>
+
+                                            @if(session()->has('coupon'))
+                                                <li class="coupon_price" data-price="{{Session::get('coupon')['value']}}">You Save<span>Rs {{number_format(Session::get('coupon')['value'],2)}}</span></li>
+                                            @endif
+                                            @php
+                                                $total_amount= $total;
+                                                if(session()->has('coupon')){
+                                                    $total_amount=$total_amount-Session::get('coupon')['value'];
+                                                }
+                                            @endphp
+                                            @if(session()->has('coupon'))
+                                                <li class="last" id="order_total_price">You Pay<span>Rs {{number_format($total_amount,2)}}</span></li>
+                                            @else
+                                                <li class="last" id="order_total_price">You Pay<span>Rs {{number_format($total_amount,2)}}</span></li>
+                                            @endif
+                                        </ul>
+                                        <div class="button5">
+                                            <a href="{{route('checkout')}}" class="btn">Checkout</a>
+                                            <a href="{{route('product-grids')}}" class="btn">Continue shopping</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
 						</div>
 					</div>
 					<!--/ End Total Amount -->

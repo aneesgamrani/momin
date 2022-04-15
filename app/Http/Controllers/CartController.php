@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers;
 use Auth;
-use Illuminate\Http\Request;
+use Helper;
+use App\Models\Cart;
 use App\Models\Product;
 use App\Models\Wishlist;
-use App\Models\Cart;
+use App\Traits\CartTrait;
 use Illuminate\Support\Str;
-use Helper;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Session;
+
 class CartController extends Controller
 {
+    use CartTrait;
     protected $product=null;
     public function __construct(Product $product){
         $this->product=$product;
@@ -20,13 +24,43 @@ class CartController extends Controller
         if (empty($request->slug)) {
             request()->session()->flash('error','Invalid Products');
             return back();
-        }        
+        }
         $product = Product::where('slug', $request->slug)->first();
         // return $product;
         if (empty($product)) {
             request()->session()->flash('error','Invalid Products');
             return back();
         }
+        if (!auth()->user()) :
+            // return redirect()->route('login.form');
+            $cart = $this->CartData() ? $this->CartData() : [];
+            $product_keys = [];
+            if (!empty($cart)) :
+                foreach ($cart as $key => $value) {
+                    foreach ($value as $k => $val) {
+                        array_push($product_keys, $val['product_id']);
+                    }
+                }
+                if (in_array($product->id, $product_keys)) :
+                    request()->session()->flash('error', 'Product already added in cart.');
+                    return back();
+                endif;
+            endif;
+
+            $cartSessionData = [
+                'user_id' => 0,
+                'product_id' => $product->id,
+                'price' => ($product->price - ($product->price * $product->discount) / 100),
+                'quantity' => 1,
+                'amount' => ($product->price),
+                'product_info' => $product,
+            ];
+            array_push($cart, [Str::random(20) => $cartSessionData]);
+            session()->put('cart', $cart);
+
+            request()->session()->flash('success', 'Product successfully added to cart.');
+            return back();
+        endif;
 
         $already_cart = Cart::where('user_id', auth()->user()->id)->where('order_id',null)->where('product_id', $product->id)->first();
         // return $already_cart;
@@ -37,9 +71,9 @@ class CartController extends Controller
             // return $already_cart->quantity;
             if ($already_cart->product->stock < $already_cart->quantity || $already_cart->product->stock <= 0) return back()->with('error','Stock not sufficient!.');
             $already_cart->save();
-            
+
         }else{
-            
+
             $cart = new Cart;
             $cart->user_id = auth()->user()->id;
             $cart->product_id = $product->id;
@@ -51,8 +85,8 @@ class CartController extends Controller
             $wishlist=Wishlist::where('user_id',auth()->user()->id)->where('cart_id',null)->update(['cart_id'=>$cart->id]);
         }
         request()->session()->flash('success','Product successfully added to cart');
-        return back();       
-    }  
+        return back();
+    }
 
     public function singleAddToCart(Request $request){
         $request->validate([
@@ -69,8 +103,38 @@ class CartController extends Controller
         if ( ($request->quant[1] < 1) || empty($product) ) {
             request()->session()->flash('error','Invalid Products');
             return back();
-        }    
+        }
+        if(!auth()->user()):
+            // return redirect()->route('login.form');
+            $cart = $this->CartData() ? $this->CartData() : [];
+            $product_keys = [];
+            if(!empty($cart)):
+                foreach ($cart as $key => $value) {
+                    foreach ($value as $k => $val) {
+                        array_push($product_keys, $val['product_id']);
+                    }
 
+                }
+                if (in_array($product->id, $product_keys)) :
+                    request()->session()->flash('error', 'Product already added in cart.');
+                    return back();
+                endif;
+            endif;
+
+            $cartSessionData = [
+                'user_id' => 0,
+                'product_id' => $product->id,
+                'price' =>  ($product->price-($product->price*$product->discount)/100),
+                'quantity' => $request->quant[1],
+                'amount' => ($product->price * $request->quant[1]),
+                'product_info' => $product,
+            ];
+            array_push($cart, [Str::random(20) => $cartSessionData]);
+            session()->put('cart',$cart);
+
+            request()->session()->flash('success', 'Product successfully added to cart.');
+            return back();
+        endif;
         $already_cart = Cart::where('user_id', auth()->user()->id)->where('order_id',null)->where('product_id', $product->id)->first();
 
         // return $already_cart;
@@ -83,9 +147,9 @@ class CartController extends Controller
             if ($already_cart->product->stock < $already_cart->quantity || $already_cart->product->stock <= 0) return back()->with('error','Stock not sufficient!.');
 
             $already_cart->save();
-            
+
         }else{
-            
+
             $cart = new Cart;
             $cart->user_id = auth()->user()->id;
             $cart->product_id = $product->id;
@@ -97,19 +161,32 @@ class CartController extends Controller
             $cart->save();
         }
         request()->session()->flash('success','Product successfully added to cart.');
-        return back();       
-    } 
-    
-    public function cartDelete(Request $request){
+        return back();
+    }
+
+    public function cartDelete(Request $request,$id=null){
+
+        if(!auth()->user()):
+            $cart = $this->CartData();
+            $cart = [];
+            foreach ($cart as $key => $value) {
+               if($value != $id):
+                    array_push($cart, $value);
+               endif;
+            }
+           Session::put('cart',$cart);
+            request()->session()->flash('success', 'Item removed from Cart successfully');
+            return back();
+        endif;
         $cart = Cart::find($request->id);
         if ($cart) {
             $cart->delete();
             request()->session()->flash('success','Cart successfully removed');
-            return back();  
+            return back();
         }
         request()->session()->flash('error','Error please try again');
-        return back();       
-    }     
+        return back();
+    }
 
     public function cartUpdate(Request $request){
         // dd($request->all());
@@ -132,7 +209,7 @@ class CartController extends Controller
                     }
                     $cart->quantity = ($cart->product->stock > $quant) ? $quant  : $cart->product->stock;
                     // return $cart;
-                    
+
                     if ($cart->product->stock <=0) continue;
                     $after_price=($cart->product->price-($cart->product->price*$cart->product->discount)/100);
                     $cart->amount = $after_price * $quant;
@@ -146,7 +223,7 @@ class CartController extends Controller
             return back()->with($error)->with('success', $success);
         }else{
             return back()->with('Cart Invalid!');
-        }    
+        }
     }
 
     // public function addToCart(Request $request){
@@ -176,7 +253,7 @@ class CartController extends Controller
     //             'price'=>$this->product->price,
     //             'photo'=>$this->product->photo,
     //         );
-            
+
     //         $price=$this->product->price;
     //         if($this->product->discount){
     //             $price=($price-($price*$this->product->discount)/100);

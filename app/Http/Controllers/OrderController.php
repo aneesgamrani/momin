@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use PDF;
+use Helper;
+use App\User;
+use Notification;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Shipping;
-use App\User;
-use PDF;
-use Notification;
-use Helper;
 use Illuminate\Support\Str;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Session;
 use App\Notifications\StatusNotification;
 
 class OrderController extends Controller
@@ -54,8 +55,42 @@ class OrderController extends Controller
             'post_code'=>'string|nullable',
             'email'=>'string|required'
         ]);
-        // return $request->all();
+        // return $request->all();/
+        $cartSession = Session::get('cart');
+        if(!auth()->user() && isset($cartSession) ):
+            if(empty($cartSession)){
+                request()->session()->flash('error', 'Cart is Empty !');
+                return back();
+            }
+              foreach($cartSession as $key => $value){
+                foreach ($value as $k => $val) {
+                    $order = [
+                        'user_id' => $val,
+                        'order_number' => $val,
+                        'sub_total' => $val,
+                        'quantity' => $val,
+                        'delivery_charge' => $val,
+                        'status' => $val,
+                        'total_amount' => $val,
+                        'first_name' => $val,
+                        'last_name' => $val,
+                        'country' => $val,
+                        'post_code' => $val,
+                        'address1' => $val,
+                        'address2' => $val,
+                        'phone' => $val,
+                        'email' => $val,
+                        'payment_method' => $val,
+                        'payment_status' => $val,
+                        'shipping_id' => $val,
+                        'coupon'
+                    ];
 
+                }
+              }
+
+            die;
+        endif;
         if(empty(Cart::where('user_id',auth()->user()->id)->where('order_id',null)->first())){
             request()->session()->flash('error','Cart is Empty !');
             return back();
@@ -146,7 +181,7 @@ class OrderController extends Controller
         }
         Cart::where('user_id', auth()->user()->id)->where('order_id', null)->update(['order_id' => $order->id]);
 
-        // dd($users);        
+        // dd($users);
         request()->session()->flash('success','Your product successfully placed in order');
         return redirect()->route('home');
     }
@@ -250,17 +285,17 @@ class OrderController extends Controller
             elseif($order->status=="process"){
                 request()->session()->flash('success','Your order is under processing please wait.');
                 return redirect()->route('home');
-    
+
             }
             elseif($order->status=="delivered"){
                 request()->session()->flash('success','Your order is successfully delivered.');
                 return redirect()->route('home');
-    
+
             }
             else{
                 request()->session()->flash('error','Your order canceled. please try again');
                 return redirect()->route('home');
-    
+
             }
         }
         else{

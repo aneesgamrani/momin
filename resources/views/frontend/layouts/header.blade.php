@@ -1,3 +1,25 @@
+     @php
+        $total = 0;
+        $totalPrice = 0;
+        $cartData = [];
+        $cartData = Session::get('cart');// print_r($cartData); die;
+        if(isset($cartData) && !empty($cartData)):
+            foreach ($cartData as $k => $value) {
+                // print_r($value);
+                foreach ($value as $key => $val) {
+                    // print_r($val);
+                    $total += $val['quantity'];
+                    $totalPrice += $val['price'];
+                }
+                //   $total += $value['quantity'];
+                // $totalPrice += $value['price'];
+            }
+            // var_dump($total); die;
+        endif;
+
+
+        // print_r(Session::get('cart'));
+    @endphp
 <header class="header shop">
     <!-- Topbar -->
     <div class="topbar">
@@ -9,7 +31,7 @@
                         <ul class="list-main">
                             @php
                                 $settings=DB::table('settings')->get();
-                                
+
                             @endphp
                             <li><i class="ti-headphone-alt"></i>@foreach($settings as $data) {{$data->phone}} @endforeach</li>
                             <li><i class="ti-email"></i> @foreach($settings as $data) {{$data->email}} @endforeach</li>
@@ -19,14 +41,14 @@
                 </div>
                 <div class="col-lg-6 col-md-12 col-12">
                     <!-- Top Right -->
-                    <!-- <div class="right-content">
+                     <div class="right-content">
                         <ul class="list-main">
                         <li><i class="ti-location-pin"></i> <a href="{{route('order.track')}}">Track Order</a></li>
                             {{-- <li><i class="ti-alarm-clock"></i> <a href="#">Daily deal</a></li> --}}
-                            @auth 
+                            @auth
                                 @if(Auth::user()->role=='admin')
                                     <li><i class="ti-user"></i> <a href="{{route('admin')}}"  target="_blank">Dashboard</a></li>
-                                @else 
+                                @else
                                     <li><i class="ti-user"></i> <a href="{{route('user')}}"  target="_blank">Dashboard</a></li>
                                 @endif
                                 <li><i class="ti-power-off"></i> <a href="{{route('user.logout')}}">Logout</a></li>
@@ -35,7 +57,7 @@
                                 <li><i class="ti-power-off"></i><a href="{{route('login.form')}}">Login /</a> <a href="{{route('register.form')}}">Register</a></li>
                             @endauth
                         </ul>
-                    </div> -->
+                    </div>
                     <!-- End Top Right -->
                 </div>
             </div>
@@ -50,7 +72,7 @@
                     <div class="logo">
                         @php
                             $settings=DB::table('settings')->get();
-                        @endphp                    
+                        @endphp
                         <a href="{{route('home')}}"><img src="@foreach($settings as $data) {{$data->logo}} @endforeach" alt="logo"></a>
                     </div>
                     <!--/ End Logo -->
@@ -90,7 +112,7 @@
                     <div class="right-bar">
                         <!-- Search Form -->
                         <div class="sinlge-bar shopping">
-                            @php 
+                            @php
                                 $total_prod=0;
                                 $total_amount=0;
                             @endphp
@@ -139,7 +161,15 @@
                             <a href="{{route('wishlist')}}" class="single-icon"><i class="fa fa-heart-o" aria-hidden="true"></i></a>
                         </div> --}}
                         <div class="sinlge-bar shopping">
-                            <a href="{{route('cart')}}" class="single-icon"><i class="ti-bag"></i> <span class="total-count">{{Helper::cartCount()}}</span></a>
+                            <a href="{{route('cart')}}" class="single-icon"><i class="ti-bag"></i> <span class="total-count">
+
+                            @if (auth()->user())
+                                {{Helper::cartCount()}}
+                            @else
+
+                               {{$total}}
+                            @endif
+                            </span></a>
                             <!-- Shopping Item -->
                             @auth
                                 <div class="shopping-item">
@@ -170,6 +200,39 @@
                                     </div>
                                 </div>
                             @endauth
+                            @if (!auth()->user() && (isset($cartData) && !empty($cartData)) )
+                                <div class="shopping-item">
+                                    <div class="dropdown-cart-header">
+                                        <span>{{$total}} Items</span>
+                                        <a href="{{route('cart')}}">View Cart</a>
+                                    </div>
+                                    <ul class="shopping-list">
+                                        {{-- {{Helper::getAllProductFromCart()}} --}}
+                                            @foreach($cartData as $key => $cartData)
+                                                @foreach ($cartData as $key => $val )
+                                                    @php
+                                                            $photo= $val['product_info']->photo;
+                                                        @endphp
+                                                        <li>
+                                                            <a href="{{route('cart-delete',$key)}}" class="remove" title="Remove this item"><i class="fa fa-remove"></i></a>
+                                                            <a class="cart-img" href="#"><img src="{{$photo}}" alt="{{$photo}}"></a>
+                                                            <h4><a href="{{route('product-detail',$val['product_info']->slug)}}" target="_blank">{{$val['product_info']->title}}</a></h4>
+                                                            <p class="quantity">{{$val['quantity']}} x - <span class="amount">Rs {{number_format($val['price'],2)}}</span></p>
+                                                        </li>
+
+                                                @endforeach
+
+                                            @endforeach
+                                    </ul>
+                                    <div class="bottom">
+                                        <div class="total">
+                                            <span>Total</span>
+                                            <span class="total-amount">Rs {{number_format($totalPrice,2)}}</span>
+                                        </div>
+                                        <a href="{{route('checkout')}}" class="btn animate">Checkout</a>
+                                    </div>
+                                </div>
+                            @endif
                             <!--/ End Shopping Item -->
                         </div>
                     </div>
@@ -186,21 +249,21 @@
                         <div class="menu-area">
                             <!-- Main Menu -->
                             <nav class="navbar navbar-expand-lg">
-                                <div class="navbar-collapse">	
-                                    <div class="nav-inner">	
+                                <div class="navbar-collapse">
+                                    <div class="nav-inner">
                                         <ul class="nav main-menu menu navbar-nav">
                                             <li class="{{Request::path()=='home' ? 'active' : ''}}"><a href="{{route('home')}}">Home</a></li>
                                             <li class="{{Request::path()=='about-us' ? 'active' : ''}}"><a href="{{route('about-us')}}">About Us</a></li>
-                                            <li class="@if(Request::path()=='product-grids'||Request::path()=='product-lists')  active  @endif"><a href="{{route('product-grids')}}">Products</a><span class="new">New</span></li>												
+                                            <li class="@if(Request::path()=='product-grids'||Request::path()=='product-lists')  active  @endif"><a href="{{route('product-grids')}}">Products</a><span class="new">New</span></li>
                                                 {{Helper::getHeaderCategory()}}
-                                            <li class="{{Request::path()=='blog' ? 'active' : ''}}"><a href="{{route('blog')}}">Blog</a></li>									
-                                               
+                                            <li class="{{Request::path()=='blog' ? 'active' : ''}}"><a href="{{route('blog')}}">Blog</a></li>
+
                                             <li class="{{Request::path()=='contact' ? 'active' : ''}}"><a href="{{route('contact')}}">Contact Us</a></li>
                                         </ul>
                                     </div>
                                 </div>
                             </nav>
-                            <!--/ End Main Menu -->	
+                            <!--/ End Main Menu -->
                         </div>
                     </div>
                 </div>
